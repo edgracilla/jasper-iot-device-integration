@@ -15,7 +15,7 @@ platform.on('sync', function (lastSyncDate) {
         messageId: '?',
         version: version,
         licenseKey: licenseKey,
-        since: lastSyncDate
+        since: lastSyncDate.toISOString()
     }, (error, response) => {
         if (error) {
             platform.handleException({
