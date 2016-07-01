@@ -66,7 +66,7 @@ platform.on('sync', function (lastSyncDate) {
                 },
                 (err) => {
                     if (err) {
-                        platform.handleException(error);
+                        platform.handleException(err);
                     } else {
                         platform.log(`Syncing ${iccids.length} devices completed`);
                     }
