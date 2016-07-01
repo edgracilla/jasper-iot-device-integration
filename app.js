@@ -18,10 +18,7 @@ platform.on('sync', function (lastSyncDate) {
         since: lastSyncDate.toISOString()
     }, (error, response) => {
         if (error) {
-            platform.handleException({
-                name: 'Device sync',
-                message: error
-            });
+            platform.handleException(error);
         } else {
             let iccids = response.iccids.iccid;
             let limit = 50;
@@ -61,10 +58,7 @@ platform.on('sync', function (lastSyncDate) {
 
                         },(error) => {
                             if (error) {
-                                platform.handleException({
-                                    name: 'Device sync',
-                                    message: error
-                                });
+                                platform.handleException(error);
                             }
                             callback();
                         });
@@ -72,10 +66,7 @@ platform.on('sync', function (lastSyncDate) {
                 },
                 (err) => {
                     if (err) {
-                        platform.handleException({
-                            name: 'Device sync',
-                            message: error
-                        });
+                        platform.handleException(error);
                     } else {
                         platform.log(`Syncing ${iccids.length} devices completed`);
                     }
