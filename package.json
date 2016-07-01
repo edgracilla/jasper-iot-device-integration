@@ -1,0 +1,30 @@
+{
+  "name": "connector-plugin-seed",
+  "description": "Jasper IOT Device Integration Plugin for the Reekoh IoT Platform. Connects a Reekoh Instance with Jasper IOT to sync devices.",
+  "version": "1.0.0",
+  "author": "Reekoh, Inc.",
+  "main": "app.js",
+  "scripts": {
+    "test": "gulp test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Reekoh/jasper-iot-device-integration"
+  },
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-cli": "^1.2.1",
+    "gulp-jshint": "^2.0.1",
+    "gulp-json-lint": "^0.1.0",
+    "gulp-mocha": "^2.2.0",
+    "gulp-plumber": "^1.1.0",
+    "jshint": "^2.9.2",
+    "mocha": "^2.5.3",
+    "should": "^9.0.2"
+  },
+  "license": "LGPL-3.0",
+  "dependencies": {
+    "async": "^2.0.0-rc.6",
+    "soap": "^0.16.0"
+  }
+}
