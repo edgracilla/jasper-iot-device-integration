@@ -1,0 +1,20 @@
+{
+  "username": {
+    "label": "Jasper IOT Username",
+    "type": "String",
+    "required": true,
+    "help": "Specify Jasper IOT Username"
+  },
+  "password": {
+    "label": "Jasper IOT Password",
+    "type": "Password",
+    "required": true,
+    "help": "Specify Password"
+  },
+  "licenseKey": {
+    "label": "License key",
+    "type": "Password",
+    "required": true,
+    "help": "The license key used for request metering, or possible authorization purpose (limit API client itself, not the Control Center user)."
+  }
+}
