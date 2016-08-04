@@ -74,11 +74,13 @@ platform.once('close', function () {
  */
 platform.once('ready', function (options) {
 	let soap = require('soap');
-	let url = 'config/Terminal.wsdl';
 
 	licenseKey = options.licenseKey;
 
-	soap.createClient(url, function (error, _jasperClient) {
+	soap.createClient('config/Terminal.wsdl', function (error, _jasperClient) {
+		if (options.endpoint)
+			_jasperClient.setEndpoint(options.endpoint);
+
 		let wsSecurity = new soap.WSSecurity(options.username, options.password);
 		_jasperClient.setSecurity(wsSecurity);
 		jasperClient = _jasperClient;

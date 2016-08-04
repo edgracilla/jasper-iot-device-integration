@@ -1,20 +1,25 @@
 {
   "username": {
-    "label": "Jasper IOT Username",
+    "label": "Username",
     "type": "String",
     "required": true,
-    "help": "Specify Jasper IOT Username"
+    "help": "Username to be used for authentication."
   },
   "password": {
-    "label": "Jasper IOT Password",
+    "label": "Password",
     "type": "Password",
     "required": true,
-    "help": "Specify Password"
+    "help": "Password to be used for authentication."
   },
   "licenseKey": {
     "label": "License key",
     "type": "Password",
     "required": true,
     "help": "The license key used for request metering, or possible authorization purpose (limit API client itself, not the Control Center user)."
+  },
+  "endpoint": {
+    "label": "Endpoint",
+    "type": "String",
+    "help": "(Optional) Jasper API Endpoint to be used. Default: https://api.jasperwireless.com"
   }
 }
