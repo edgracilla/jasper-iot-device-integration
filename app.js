@@ -2,6 +2,7 @@
 
 var get      = require('lodash.get'),
 	async    = require('async'),
+	isEmpty  = require('lodash.isempty'),
 	platform = require('./platform'),
 	jasperClient, version, licenseKey;
 
@@ -17,13 +18,16 @@ platform.on('sync', function (lastSyncDate) {
 		since: lastSyncDate
 	}, (getModifiedTerminalsError, response) => {
 		if (getModifiedTerminalsError) {
-			if (get(getModifiedTerminalsError, 'Fault.faultstring'))
+			if (!isEmpty(get(getModifiedTerminalsError, 'Fault.faultstring')))
 				return platform.handleException(new Error(get(getModifiedTerminalsError, 'Fault.faultstring')));
 			else
 				return platform.handleException(getModifiedTerminalsError);
 		}
 
-		let iccids = response.iccids.iccid;
+		if (isEmpty(response) || isEmpty(response.iccids) || isEmpty(get(response, 'iccids.iccid')))
+			return platform.log(`Jasper IoT Device Integration - No modified terminals since ${lastSyncDate}`);
+
+		let iccids = get(response, 'iccids.iccid');
 		let limit = 50;
 		let totalLoop = Math.ceil(iccids.length / limit);
 		let count = 0;
@@ -43,7 +47,7 @@ platform.on('sync', function (lastSyncDate) {
 				}
 			}, (getTerminalDetailsError, response) => {
 				if (getTerminalDetailsError) {
-					if (get(getTerminalDetailsError, 'Fault.faultstring'))
+					if (!isEmpty(get(getTerminalDetailsError, 'Fault.faultstring')))
 						platform.handleException(new Error(get(getTerminalDetailsError, 'Fault.faultstring')));
 					else
 						platform.handleException(getTerminalDetailsError);
@@ -62,7 +66,7 @@ platform.on('sync', function (lastSyncDate) {
 
 					platform.syncDevice(JSON.stringify(Object.assign(terminal, {
 						_id: terminal.terminalId || terminal.iccid,
-						name: (terminal.terminalId) ? terminal.iccid : terminal.imsi
+						name: (isEmpty(terminal.terminalId)) ? terminal.iccid : terminal.imsi
 					})), done);
 				}, (eachError) => {
 					if (eachError) platform.handleException(eachError);
