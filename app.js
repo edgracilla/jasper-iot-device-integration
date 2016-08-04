@@ -12,6 +12,8 @@ var platform = require('./platform'),
  * 3rd party service.
  */
 platform.on('sync', function (lastSyncDate) {
+	platform.log('Running "sync" on Jasper Device Integration');
+
 	jasperClient.GetModifiedTerminals({
 		messageId: '?',
 		version: VERSION,
@@ -45,6 +47,13 @@ platform.on('sync', function (lastSyncDate) {
 						name: (terminal.terminalId) ? terminal.iccid : terminal.imsi
 					})), done);
 
+					platform.log({
+						title: 'Jasper Device Integration - Synced Device',
+						device: Object.assign(terminal, {
+							_id: terminal.terminalId || terminal.iccid,
+							name: (terminal.terminalId) ? terminal.iccid : terminal.imsi
+						})
+					});
 				}, (error) => {
 					if (error) platform.handleException(error);
 
