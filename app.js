@@ -1,28 +1,33 @@
 'use strict';
 
-const VERSION = '2.43';
-
-var platform = require('./platform'),
+var get      = require('lodash.get'),
 	async    = require('async'),
-	jasperClient,
-	licenseKey;
+	isEmpty  = require('lodash.isempty'),
+	platform = require('./platform'),
+	jasperClient, version, licenseKey;
 
 /**
  * Emitted when the platform issues a sync request. Means that the device integration should fetch updates from the
  * 3rd party service.
  */
 platform.on('sync', function (lastSyncDate) {
-	platform.log('Running "sync" on Jasper Device Integration');
-
 	jasperClient.GetModifiedTerminals({
 		messageId: '?',
-		version: VERSION,
+		version: version,
 		licenseKey: licenseKey,
 		since: lastSyncDate
-	}, (error, response) => {
-		if (error) return platform.handleException(error);
+	}, (getModifiedTerminalsError, response) => {
+		if (getModifiedTerminalsError) {
+			if (!isEmpty(get(getModifiedTerminalsError, 'Fault.faultstring')))
+				return platform.handleException(new Error(get(getModifiedTerminalsError, 'Fault.faultstring')));
+			else
+				return platform.handleException(getModifiedTerminalsError);
+		}
 
-		let iccids = response.iccids.iccid;
+		if (isEmpty(response) || isEmpty(response.iccids) || isEmpty(get(response, 'iccids.iccid')))
+			return platform.log(`Jasper IoT Device Integration - No modified terminals since ${lastSyncDate}`);
+
+		let iccids = get(response, 'iccids.iccid');
 		let limit = 50;
 		let totalLoop = Math.ceil(iccids.length / limit);
 		let count = 0;
@@ -35,18 +40,22 @@ platform.on('sync', function (lastSyncDate) {
 
 			jasperClient.GetTerminalDetails({
 				messageId: '?',
-				version: VERSION,
+				version: version,
 				licenseKey: licenseKey,
 				iccids: {
 					iccid: selectedIccids
 				}
-			}, (error, response) => {
-				async.each(response.terminals.terminal, (terminal, done) => {
-					platform.syncDevice(JSON.stringify(Object.assign(terminal, {
-						_id: terminal.terminalId || terminal.iccid,
-						name: (terminal.terminalId) ? terminal.iccid : terminal.imsi
-					})), done);
+			}, (getTerminalDetailsError, response) => {
+				if (getTerminalDetailsError) {
+					if (!isEmpty(get(getTerminalDetailsError, 'Fault.faultstring')))
+						platform.handleException(new Error(get(getTerminalDetailsError, 'Fault.faultstring')));
+					else
+						platform.handleException(getTerminalDetailsError);
 
+					callback();
+				}
+
+				async.each(response.terminals.terminal, (terminal, done) => {
 					platform.log({
 						title: 'Jasper Device Integration - Synced Device',
 						device: Object.assign(terminal, {
@@ -54,15 +63,20 @@ platform.on('sync', function (lastSyncDate) {
 							name: (terminal.terminalId) ? terminal.iccid : terminal.imsi
 						})
 					});
-				}, (error) => {
-					if (error) platform.handleException(error);
+
+					platform.syncDevice(JSON.stringify(Object.assign(terminal, {
+						_id: terminal.terminalId || terminal.iccid,
+						name: (isEmpty(terminal.terminalId)) ? terminal.iccid : terminal.imsi
+					})), done);
+				}, (eachError) => {
+					if (eachError) platform.handleException(eachError);
 
 					callback();
 				});
 			});
-		}, (err) => {
-			if (err)
-				platform.handleException(err);
+		}, (whilstError) => {
+			if (whilstError)
+				platform.handleException(whilstError);
 			else
 				platform.log(`Syncing ${iccids.length} devices completed`);
 		});
@@ -82,9 +96,15 @@ platform.once('close', function () {
  * @param {object} options The parameters or options. Specified through config.json.
  */
 platform.once('ready', function (options) {
-	let soap = require('soap');
+	let soap   = require('soap'),
+		config = require('./config.json');
 
 	licenseKey = options.licenseKey;
+
+	if (options.version)
+		version = options.version;
+	else
+		version = config.version.default;
 
 	soap.createClient('config/Terminal.wsdl', function (error, _jasperClient) {
 		if (options.endpoint)

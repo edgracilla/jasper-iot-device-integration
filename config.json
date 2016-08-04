@@ -21,5 +21,11 @@
     "label": "Endpoint",
     "type": "String",
     "help": "(Optional) Jasper API Endpoint to be used. Default: https://api.jasperwireless.com"
+  },
+  "version": {
+    "label": "Version",
+    "type": "String",
+    "default": "3.25",
+    "help": "(Optional) Jasper API Version. Default: 3.25"
   }
 }
