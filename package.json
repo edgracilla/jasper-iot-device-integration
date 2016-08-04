@@ -1,7 +1,7 @@
 {
   "name": "connector-plugin-seed",
   "description": "Jasper IOT Device Integration Plugin for the Reekoh IoT Platform. Connects a Reekoh Instance with Jasper IOT to sync devices.",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "Reekoh, Inc.",
   "main": "app.js",
   "scripts": {
@@ -25,6 +25,7 @@
   "license": "LGPL-3.0",
   "dependencies": {
     "async": "^1.5.2",
+    "lodash.get": "^4.4.1",
     "soap": "^0.16.0"
   }
 }
