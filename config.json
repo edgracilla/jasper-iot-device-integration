@@ -20,7 +20,7 @@
   "endpoint": {
     "label": "Endpoint",
     "type": "String",
-    "help": "(Optional) Jasper API Endpoint to be used. Default: https://api.jasperwireless.com"
+    "help": "(Optional) Jasper API Endpoint to be used. Default: https://api.jasperwireless.com/ws/service/terminal"
   },
   "version": {
     "label": "Version",
