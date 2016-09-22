@@ -59,14 +59,14 @@ platform.on('sync', function (lastSyncDate) {
 					platform.log({
 						title: 'Jasper Device Integration - Synced Device',
 						device: Object.assign(terminal, {
-							_id: terminal.terminalId || terminal.iccid,
-							name: (terminal.terminalId) ? terminal.iccid : terminal.imsi
+							_id: terminal.iccid,
+							name: isEmpty(terminal.terminalId) ? terminal.imsi : terminal.terminalId
 						})
 					});
 
 					platform.syncDevice(JSON.stringify(Object.assign(terminal, {
-						_id: terminal.terminalId || terminal.iccid,
-						name: (isEmpty(terminal.terminalId)) ? terminal.iccid : terminal.imsi
+						_id: terminal.iccid,
+						name: isEmpty(terminal.terminalId) ? terminal.imsi : terminal.terminalId
 					})), done);
 				}, (eachError) => {
 					if (eachError) platform.handleException(eachError);
