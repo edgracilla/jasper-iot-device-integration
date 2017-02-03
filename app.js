@@ -1,120 +1,132 @@
-'use strict';
+'use strict'
 
-var get      = require('lodash.get'),
-	async    = require('async'),
-	isEmpty  = require('lodash.isempty'),
-	platform = require('./platform'),
-	jasperClient, version, licenseKey;
+const reekoh = require('demo-reekoh-node')
+const _plugin = new reekoh.plugins.DeviceSync()
 
-/**
- * Emitted when the platform issues a sync request. Means that the device integration should fetch updates from the
- * 3rd party service.
- */
-platform.on('sync', function (lastSyncDate) {
-	jasperClient.GetModifiedTerminals({
-		messageId: '?',
-		version: version,
-		licenseKey: licenseKey,
-		since: lastSyncDate
-	}, (getModifiedTerminalsError, response) => {
-		if (getModifiedTerminalsError) {
-			if (!isEmpty(get(getModifiedTerminalsError, 'Fault.faultstring')))
-				return platform.handleException(new Error(get(getModifiedTerminalsError, 'Fault.faultstring')));
-			else
-				return platform.handleException(getModifiedTerminalsError);
-		}
+const soap = require('soap')
+const async = require('async')
+const get = require('lodash.get')
+const isEmpty = require('lodash.isempty')
 
-		if (isEmpty(response) || isEmpty(response.iccids) || isEmpty(get(response, 'iccids.iccid')))
-			return platform.log(`Jasper IoT Device Integration - No modified terminals since ${lastSyncDate}`);
+let _version = null
+let _jasperClient = {}
 
-		let iccids = get(response, 'iccids.iccid');
-		let limit = 50;
-		let totalLoop = Math.ceil(iccids.length / limit);
-		let count = 0;
+let _options ={
+  licenseKey: process.env.JASPER_IOT_KEY,
+  version: process.env.JASPER_IOT_VERSION,
+  username: process.env.JASPER_IOT_USERNAME,
+  password: process.env.JASPER_IOT_PASSWORD,
+  endpoint: process.env.JASPER_IOT_ENDPOINT
+}
 
-		async.whilst(() => {
-			return count < totalLoop;
-		}, (callback) => {
-			let selectedIccids = iccids.slice(count * limit, (count + 1) * limit);
-			count++;
+_plugin.once('ready', function () {
 
-			jasperClient.GetTerminalDetails({
-				messageId: '?',
-				version: version,
-				licenseKey: licenseKey,
-				iccids: {
-					iccid: selectedIccids
-				}
-			}, (getTerminalDetailsError, response) => {
-				if (getTerminalDetailsError) {
-					if (!isEmpty(get(getTerminalDetailsError, 'Fault.faultstring')))
-						platform.handleException(new Error(get(getTerminalDetailsError, 'Fault.faultstring')));
-					else
-						platform.handleException(getTerminalDetailsError);
+  _version = _options.version
+    ? _options.version
+    : _plugin.config.version.default
 
-					callback();
-				}
+  soap.createClient('config/Terminal.wsdl', function (err, client) {
+    if (err) return _plugin.logException(err)
 
-				async.each(response.terminals.terminal, (terminal, done) => {
-					platform.log({
-						title: 'Jasper Device Integration - Synced Device',
-						device: Object.assign(terminal, {
-							_id: terminal.iccid,
-							name: isEmpty(terminal.terminalId) ? terminal.imsi : terminal.terminalId
-						})
-					});
+    if (_options.endpoint) client.setEndpoint(_options.endpoint)
 
-					platform.syncDevice(JSON.stringify(Object.assign(terminal, {
-						_id: terminal.iccid,
-						name: isEmpty(terminal.terminalId) ? terminal.imsi : terminal.terminalId
-					})), done);
-				}, (eachError) => {
-					if (eachError) platform.handleException(eachError);
+    client.setSecurity(new soap.WSSecurity(_options.username, _options.password))
+    _jasperClient = client
 
-					callback();
-				});
-			});
-		}, (whilstError) => {
-			if (whilstError)
-				platform.handleException(whilstError);
-			else
-				platform.log(`Syncing ${iccids.length} devices completed`);
-		});
-	});
-});
+    _plugin.log('Jasper IoT Device Integration has been initialized.')
+    setImmediate(() => { process.send({ type: 'ready' }) }) // for mocha
+  })
+})
+_plugin.on('sync', function () {
 
-/**
- * Emitted when the platform shuts down the plugin. The Device Integration should perform cleanup of the resources on this event.
- */
-platform.once('close', function () {
-	platform.notifyClose();
-});
+  // console.log(_jasperClient.GetModifiedTerminals)
 
-/**
- * Emitted when the platform bootstraps the plugin. The plugin should listen once and execute its init process.
- * Afterwards, platform.notifyReady() should be called to notify the platform that the init process is done.
- * @param {object} options The parameters or options. Specified through config.json.
- */
-platform.once('ready', function (options) {
-	let soap   = require('soap'),
-		config = require('./config.json');
+  _jasperClient.GetModifiedTerminals({
+    messageId: '?',
+    version: _version,
+    licenseKey: _options.licenseKey
+  }, (err, response) => {
+    if (err) {
+      if (!isEmpty(get(err, 'Fault.faultstring'))) {
+        return _plugin.logException(new Error(get(err, 'Fault.faultstring')))
+      } else				{
+        return _plugin.logException(err)
+      }
+    }
 
-	licenseKey = options.licenseKey;
+    if (isEmpty(response) || isEmpty(response.iccids) || isEmpty(get(response, 'iccids.iccid'))) {
+      return _plugin.log(`Jasper IoT Device Integration - No modified terminals`)
+    }
 
-	if (options.version)
-		version = options.version;
-	else
-		version = config.version.default;
+    let count = 0
+    let limit = 50
+    let iccids = get(response, 'iccids.iccid')
+    let totalLoop = Math.ceil(iccids.length / limit)
 
-	soap.createClient('config/Terminal.wsdl', function (error, _jasperClient) {
-		if (options.endpoint)
-			_jasperClient.setEndpoint(options.endpoint);
+    async.whilst(() => {
+      return count < totalLoop
+    }, (callback) => {
+      let selectedIccids = iccids.slice(count * limit, (count + 1) * limit)
+      count++
 
-		let wsSecurity = new soap.WSSecurity(options.username, options.password);
-		_jasperClient.setSecurity(wsSecurity);
-		jasperClient = _jasperClient;
+      _jasperClient.GetTerminalDetails({
+        messageId: '?',
+        version: _version,
+        licenseKey: _options.licenseKey,
+        iccids: {
+          iccid: selectedIccids
+        }
+      }, (error, response) => {
+        if (error) {
+          if (!isEmpty(get(error, 'Fault.faultstring'))) {
+            _plugin.logException(new Error(get(error, 'Fault.faultstring')))
+          } else						{
+            _plugin.logException(error)
+          }
 
-		platform.notifyReady();
-		platform.log('Jasper IoT Device Integration has been initialized.');
-	});
-});
+          callback()
+        }
+
+        async.each(response.terminals.terminal, (terminal, done) => {
+
+          let device = Object.assign(terminal, {
+            _id: terminal.iccid,
+            name: isEmpty(terminal.terminalId) ? terminal.imsi : terminal.terminalId
+          })
+
+          _plugin.log({
+            title: 'Jasper Device Integration - Synced Device',
+            device: device
+          })
+
+          _plugin.syncDevice(device)
+            .then(done)
+            .catch(done)
+
+        }, (eachError) => {
+          if (eachError) _plugin.logException(eachError)
+          callback()
+        })
+      })
+    }, (whilstError) => {
+      if (whilstError) {
+        _plugin.logException(whilstError)
+      } else {
+        _plugin.log(`Syncing ${iccids.length} devices completed`)
+        process.send({ type: 'syncDone' }) // for mocha
+      }
+    })
+  })
+})
+
+_plugin.on('adddevice', function (device) {
+
+})
+
+_plugin.on('updatedevice', function (device) {
+
+})
+
+_plugin.on('removedevice', function (device) {
+
+})
